@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <rect width="1200" height="630" fill="#0b1020"/>
+  <text x="64" y="110" font-family="Helvetica, Arial, sans-serif" font-size="48" font-weight="700" fill="#ffffff">Provenance let it in. The trace didn't.</text>
+  <text x="64" y="160" font-family="Helvetica, Arial, sans-serif" font-size="26" fill="#a9b4d0">A tampered extension, same name and version, signed with the publisher's stolen key.</text>
+
+  <g font-family="Menlo, Consolas, monospace" font-size="28">
+    <rect x="64" y="214" width="1072" height="112" rx="10" fill="#141b33"/>
+    <text x="92" y="262" fill="#a9b4d0">provenance gate, publisher-pinned policy</text>
+    <text x="92" y="300" font-size="22" fill="#6f7a99">the stolen key signs a valid build attestation</text>
+    <text x="1108" y="282" text-anchor="end" font-weight="700" fill="#f2b84b">ADMITTED</text>
+
+    <rect x="64" y="350" width="1072" height="140" rx="10" fill="#2a1420" stroke="#ff5c7a" stroke-width="2"/>
+    <text x="92" y="398" fill="#ffffff">detonation chamber, cilock run --trace</text>
+    <text x="92" y="436" font-size="22" fill="#ffb3c1">wrote /home/victim/.ssh/authorized_keys while loading</text>
+    <text x="92" y="468" font-size="22" fill="#ffb3c1">connected to 192.0.2.1:8099 while loading</text>
+    <text x="1108" y="430" text-anchor="end" font-weight="700" fill="#ff5c7a">REFUSED</text>
+  </g>
+
+  <text x="64" y="580" font-family="Helvetica, Arial, sans-serif" font-size="20" fill="#6f7a99">Demo run on a toy extension, steps 8 and 9: github.com/testifysec/vsix-admission-demo</text>
+</svg>

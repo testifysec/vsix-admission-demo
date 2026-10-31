@@ -32,6 +32,7 @@ Every ADMITTED/REFUSED line is the exit code of `cilock verify`.
 | 7 | attacker controls the marketplace and rewrites its policy | admitted | refused |
 | 8 | attacker holds the publisher's CI signing key | (not run) | admitted |
 | 9 | same stolen-key package, loaded in the detonation chamber | refused: wrote `~/.ssh/authorized_keys`, connected out | |
+| 10 | publisher ships its own detonation; user checks build + detonation | | real release admitted; stolen build key refused (no detonation); stolen build and chamber keys refused (the trace shows the SSH write) |
 
 The marketplace gate trusts a policy signed by `marketplace.key`. The client
 gate trusts a policy signed by `publisher-policy.key`, which the marketplace
@@ -53,6 +54,12 @@ non-loopback address, or recorded no processes at all.
 The toy loader in `tamper.py` writes a fake key (not a valid key) and
 connects to 192.0.2.1, a documentation address. It only acts when
 `DEMO_SANDBOX=1`, which only the chamber sets.
+
+Step 10 has the publisher run the same chamber in its own CI under a
+second identity (`publisher-chamber`) and ship the signed trace with the
+release. The publisher's policy requires both the `build` and `detonate`
+steps, so a user can check both before installing. The rego runs at verify
+time: a validly signed trace that shows the SSH write still fails.
 
 Limits: malware that detects the sandbox, waits, or needs a user action can
 load clean. The trace runs in ptrace mode inside Docker, which cilock marks
