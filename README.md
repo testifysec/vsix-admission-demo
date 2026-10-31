@@ -1,8 +1,9 @@
 # vsix-admission-demo
 
-Companion to the TestifySec post on the Claude Code 2.1.313 extension that
-Cursor's marketplace served on 29 October 2026. It rebuilds the attack shape on
-a toy extension and shows `cilock verify` refusing it.
+Companion to the TestifySec post on the tampered Claude Code extension builds
+(2.1.312 and 2.1.313) that Cursor's marketplace served on 29 October 2026. It
+rebuilds the attack shape on a toy extension, a real version number on bytes the
+publisher never built, and shows `cilock verify` refusing it.
 
 The toy extension is `examplecorp.demo-assistant`. Nothing here is Anthropic's
 code, and the "loader" `tamper.py` prepends is one inert line.
