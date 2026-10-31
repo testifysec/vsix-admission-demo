@@ -11,6 +11,8 @@ code, and the "loader" `tamper.py` prepends is one inert line.
 ## Run
 
 Needs `cilock`, Node.js (for `npx @vscode/vsce`), `openssl`, `git` and Python 3.
+Step 9 also needs Docker; it downloads the matching Linux cilock from the
+TestifySec platform's tools endpoint.
 
 ```sh
 ./demo.sh
@@ -29,11 +31,31 @@ Every ADMITTED/REFUSED line is the exit code of `cilock verify`.
 | 6 | admitted file swapped in storage | refused at download | refused |
 | 7 | attacker controls the marketplace and rewrites its policy | admitted | refused |
 | 8 | attacker holds the publisher's CI signing key | (not run) | admitted |
+| 9 | same stolen-key package, loaded in the detonation chamber | refused: wrote `~/.ssh/authorized_keys`, connected out | |
 
 The marketplace gate trusts a policy signed by `marketplace.key`. The client
 gate trusts a policy signed by `publisher-policy.key`, which the marketplace
 never holds. Step 8 is the limit: provenance can't help once the publisher's
 build identity is stolen. In real CI, sign keyless with the workflow's OIDC
 identity instead of a file key.
+
+## The detonation chamber (step 9)
+
+`chamber/detonate.sh` runs in a `node:22` container with `--network none`
+and a throwaway `HOME`. Under `cilock run --trace` it copies the package in,
+unzips it as an editor installs it, and loads `extension.js` under Node, as
+the extension host does. cilock records every process, file write and
+connection, signs the record with the chamber key, and binds it to the VSIX
+digest. `chamber/detonation.rego` refuses a load that writes or opens
+anything under `.ssh/`, `LaunchAgents/` or the cron spool, connects to a
+non-loopback address, or recorded no processes at all.
+
+The toy loader in `tamper.py` writes a fake key (not a valid key) and
+connects to 192.0.2.1, a documentation address. It only acts when
+`DEMO_SANDBOX=1`, which only the chamber sets.
+
+Limits: malware that detects the sandbox, waits, or needs a user action can
+load clean. The trace runs in ptrace mode inside Docker, which cilock marks
+as partial coverage in the record.
 
 VSIX digests change on every run because vsce writes timestamps into the zip.
