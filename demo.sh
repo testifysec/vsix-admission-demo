@@ -7,6 +7,7 @@
 #   marketplace        marketplace signs its own admission policy
 #   attacker           attacker's key; in step 7 the attacker also holds marketplace
 #   chamber            marketplace's detonation chamber signs its traces with it
+#   publisher-chamber  publisher's own detonation chamber, a separate CI identity
 #
 # Steps 1-8 run offline after the first `npx @vscode/vsce` download. Step 9,
 # the detonation chamber, needs Docker: it loads each package in a Linux
@@ -26,11 +27,13 @@ key() {
   openssl ecparam -name prime256v1 -genkey -noout -out "out/keys/$1.key"
   openssl ec -in "out/keys/$1.key" -pubout -out "out/keys/$1.pub" 2>/dev/null
 }
-for k in publisher publisher-policy marketplace attacker chamber; do key "$k"; done
+for k in publisher publisher-policy marketplace attacker chamber publisher-chamber; do key "$k"; done
 
-# detonate <name> <vsix>: load the package in the chamber, write out/chamber/<name>/detonate.bundle.json
+# detonate <name> <vsix> [key]: load the package in the chamber, sign the
+# trace with out/keys/<key>.key (default: chamber), write
+# out/chamber/<name>/detonate.bundle.json
 detonate() {
-  local name=$1 vsix=$2 dir="out/chamber/$1"
+  local name=$1 vsix=$2 signer=${3:-chamber} dir="out/chamber/$1"
   mkdir -p "$dir/in"
   cp "$vsix" "$dir/in/package.vsix"
   python3 -I chamber/unzip.py "$dir/in/package.vsix" "$dir/in/installed"
@@ -38,7 +41,7 @@ detonate() {
     -v "$PWD/$dir/in:/in:ro" -v "$PWD/$dir:/out" \
     -v "$PWD/out/cilock-linux:/usr/local/bin/cilock:ro" \
     -v "$PWD/chamber/detonate.sh:/detonate.sh:ro" \
-    -v "$PWD/out/keys/chamber.key:/chamber.key:ro" \
+    -v "$PWD/out/keys/$signer.key:/chamber.key:ro" \
     "$CHAMBER_IMAGE" bash /detonate.sh /chamber.key /out/detonate.bundle.json >"$dir/run.log" 2>&1 \
     || { cat "$dir/run.log"; exit 1; }
   printf 'detonated    %s: %s\n' "$name" "$(grep -m1 -oE 'tracing mode = [^ ]+' "$dir/run.log")"
@@ -138,3 +141,23 @@ cilock sign -k out/keys/marketplace.key -f out/detonation-policy.json \
 chamber() { gate chamber out/detonation-policy.signed.json out/keys/marketplace.pub "$@"; }
 chamber out/publisher/$VSIX out/chamber/release/detonate.bundle.json
 chamber out/attacker/stolen-key.vsix out/chamber/stolen-key/detonate.bundle.json
+
+step "10. Publisher ships its own detonation evidence; the user checks build and detonation before install"
+# The publisher runs the same chamber in its own CI, under a second identity,
+# and its signed policy now requires both steps. The rego runs at verify
+# time, so a validly signed trace that shows the SSH write still fails.
+detonate publisher-release out/publisher/$VSIX publisher-chamber
+cilock policy from-bundles -k out/keys/publisher-chamber.pub -o out/publisher-detonate-policy.json \
+  out/chamber/publisher-release/detonate.bundle.json >/dev/null 2>&1
+python3 -I chamber/add_rego.py out/publisher-detonate-policy.json detonate chamber/detonation.rego no-sensitive-behavior
+python3 -I chamber/merge_policies.py out/publisher-full-policy.json out/policy.json out/publisher-detonate-policy.json
+cilock sign -k out/keys/publisher-policy.key -f out/publisher-full-policy.json \
+  -o out/publisher-full-policy.signed.json --offline >/dev/null 2>&1
+user() { gate user out/publisher-full-policy.signed.json out/keys/publisher-policy.pub "$@"; }
+echo "-- the real release, with the publisher's build and detonation evidence"
+user out/publisher/$VSIX out/build.bundle.json out/chamber/publisher-release/detonate.bundle.json
+echo "-- stolen build key, no detonation evidence"
+user out/attacker/stolen-key.vsix out/stolen.bundle.json
+echo "-- stolen build key and stolen chamber key: the attacker detonates its own package"
+detonate attacker-stolen-chamber out/attacker/stolen-key.vsix publisher-chamber
+user out/attacker/stolen-key.vsix out/stolen.bundle.json out/chamber/attacker-stolen-chamber/detonate.bundle.json

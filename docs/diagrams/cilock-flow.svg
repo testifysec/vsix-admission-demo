@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="760" viewBox="0 0 1600 760">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8a94b3"/></marker>
+    <marker id="r" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#ff5c7a"/></marker>
+    <marker id="g" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#46d39a"/></marker>
+  </defs>
+  <rect width="1600" height="760" fill="#0b1020"/>
+  <g font-family="Helvetica, Arial, sans-serif">
+    <text x="50" y="62" font-size="34" font-weight="700" fill="#ffffff">The same path with CI/lock checks at every hop</text>
+    <text x="50" y="98" font-size="20" fill="#a9b4d0">Same attacker, same tampered builds. Each check runs against evidence the next system can't forge.</text>
+
+    <!-- attacker -->
+    <rect x="590" y="140" width="420" height="96" rx="10" fill="#2a1420" stroke="#ff5c7a" stroke-width="2"/>
+    <text x="800" y="178" font-size="22" font-weight="700" fill="#ff8aa0" text-anchor="middle">Attacker with marketplace access</text>
+    <text x="800" y="210" font-size="17" fill="#ffb3c1" text-anchor="middle">worst case: also rewrites the marketplace's policy</text>
+    <path d="M800,236 L800,318" stroke="#ff5c7a" stroke-width="3" fill="none" marker-end="url(#r)"/>
+    <text x="812" y="284" font-size="16" fill="#ff8aa0">publishes tampered 2.1.312 and 2.1.313</text>
+
+    <g font-size="20">
+      <rect x="50" y="330" width="250" height="150" rx="10" fill="#10261f" stroke="#46d39a" stroke-width="2"/>
+      <text x="175" y="370" font-weight="700" fill="#ffffff" text-anchor="middle">Publisher CI</text>
+      <text x="175" y="400" font-size="15" font-family="Menlo, Consolas, monospace" fill="#9ff0cc" text-anchor="middle">cilock run</text>
+      <text x="175" y="424" font-size="16" fill="#a9b4d0" text-anchor="middle">signs commit + build +</text>
+      <text x="175" y="446" font-size="16" fill="#a9b4d0" text-anchor="middle">VSIX sha256</text>
+
+      <rect x="350" y="330" width="250" height="150" rx="10" fill="#141b33" stroke="#2c3657"/>
+      <text x="475" y="370" font-weight="700" fill="#ffffff" text-anchor="middle">Open VSX</text>
+      <text x="475" y="402" font-size="16" fill="#a9b4d0" text-anchor="middle">carries the package</text>
+      <text x="475" y="424" font-size="16" fill="#a9b4d0" text-anchor="middle">and its attestation</text>
+      <text x="475" y="456" font-size="15" fill="#6f7a99" text-anchor="middle">trust not required</text>
+
+      <rect x="650" y="330" width="300" height="150" rx="10" fill="#141b33" stroke="#46d39a" stroke-width="2"/>
+      <text x="800" y="366" font-weight="700" fill="#ffffff" text-anchor="middle">Cursor marketplace</text>
+      <text x="800" y="396" font-size="15" font-family="Menlo, Consolas, monospace" fill="#9ff0cc" text-anchor="middle">1. cilock verify (digest)</text>
+      <text x="800" y="420" font-size="15" font-family="Menlo, Consolas, monospace" fill="#9ff0cc" text-anchor="middle">2. detonation chamber</text>
+      <text x="800" y="444" font-size="15" font-family="Menlo, Consolas, monospace" fill="#9ff0cc" text-anchor="middle">   cilock run --trace</text>
+      <text x="800" y="468" font-size="15" fill="#a9b4d0" text-anchor="middle">re-verify before each download</text>
+
+      <rect x="1000" y="330" width="250" height="150" rx="10" fill="#141b33" stroke="#46d39a" stroke-width="2"/>
+      <text x="1125" y="370" font-weight="700" fill="#ffffff" text-anchor="middle">Editor</text>
+      <text x="1125" y="400" font-size="15" font-family="Menlo, Consolas, monospace" fill="#9ff0cc" text-anchor="middle">cilock verify</text>
+      <text x="1125" y="424" font-size="16" fill="#a9b4d0" text-anchor="middle">against the policy</text>
+      <text x="1125" y="446" font-size="16" fill="#a9b4d0" text-anchor="middle">the publisher signed</text>
+
+      <rect x="1300" y="330" width="250" height="150" rx="10" fill="#10261f" stroke="#46d39a" stroke-width="2"/>
+      <text x="1425" y="370" font-weight="700" fill="#ffffff" text-anchor="middle">Developer machine</text>
+      <text x="1425" y="402" font-size="16" fill="#9ff0cc" text-anchor="middle">installs only bytes</text>
+      <text x="1425" y="424" font-size="16" fill="#9ff0cc" text-anchor="middle">the publisher's own</text>
+      <text x="1425" y="446" font-size="16" fill="#9ff0cc" text-anchor="middle">build produced</text>
+    </g>
+    <path d="M300,405 L346,405" stroke="#46d39a" stroke-width="3" marker-end="url(#g)"/>
+    <path d="M600,405 L646,405" stroke="#46d39a" stroke-width="3" marker-end="url(#g)"/>
+    <path d="M950,405 L996,405" stroke="#46d39a" stroke-width="3" marker-end="url(#g)"/>
+    <path d="M1250,405 L1296,405" stroke="#46d39a" stroke-width="3" marker-end="url(#g)"/>
+
+    <!-- refusals -->
+    <g font-size="16">
+      <rect x="650" y="530" width="640" height="160" rx="10" fill="#1a1222" stroke="#ff5c7a" stroke-dasharray="6 5"/>
+      <text x="672" y="564" font-size="19" font-weight="700" fill="#ff8aa0">Where the tampered package stops (demo run)</text>
+      <g font-family="Menlo, Consolas, monospace" fill="#ffd0da" xml:space="preserve">
+        <text x="672" y="596">marketplace: digest not in any publisher build</text>
+        <text x="672" y="622">chamber:     wrote ~/.ssh/authorized_keys, connected out</text>
+        <text x="672" y="648">editor:      not signed by the pinned publisher key,</text>
+        <text x="672" y="672">             even after the marketplace policy is rewritten</text>
+      </g>
+    </g>
+    <path d="M800,480 L800,526" stroke="#ff5c7a" stroke-width="2" marker-end="url(#r)"/>
+    <path d="M1125,480 L1125,526" stroke="#ff5c7a" stroke-width="2" marker-end="url(#r)"/>
+
+    <text x="50" y="560" font-size="17" fill="#a9b4d0">Status today:</text>
+    <text x="50" y="588" font-size="16" fill="#a9b4d0">cilock run, cilock verify and --trace ship.</text>
+    <text x="50" y="612" font-size="16" fill="#a9b4d0">The marketplace and editor checks are a</text>
+    <text x="50" y="636" font-size="16" fill="#a9b4d0">proposal; we ran them on a toy extension.</text>
+    <text x="50" y="660" font-size="16" fill="#a9b4d0">No editor runs this check at install yet.</text>
+
+    <text x="50" y="730" font-size="15" fill="#6f7a99">Demo: github.com/testifysec/vsix-admission-demo. Limit: a stolen publisher key passes provenance; the chamber is what catches it.</text>
+  </g>
+</svg>
