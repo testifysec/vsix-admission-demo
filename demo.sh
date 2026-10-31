@@ -6,23 +6,43 @@
 #   publisher-policy   publisher signs the policy its users' editors pin
 #   marketplace        marketplace signs its own admission policy
 #   attacker           attacker's key; in step 7 the attacker also holds marketplace
+#   chamber            marketplace's detonation chamber signs its traces with it
 #
-# Runs offline after the first `npx @vscode/vsce` download. Every decision
-# is cilock verify's exit code.
+# Steps 1-8 run offline after the first `npx @vscode/vsce` download. Step 9,
+# the detonation chamber, needs Docker: it loads each package in a Linux
+# container with no network and traces it with cilock. Every decision is
+# cilock verify's exit code.
 set -uo pipefail
 cd "$(dirname "$0")"
 
 VSCE="npx -y @vscode/vsce@3.2.1"
 VSIX=demo-assistant-2.1.312.vsix
+CHAMBER_IMAGE=node:22-bookworm-slim
 
 rm -rf out
-mkdir -p out/keys out/publisher out/attacker out/storage
+mkdir -p out/keys out/publisher out/attacker out/storage out/chamber
 
 key() {
   openssl ecparam -name prime256v1 -genkey -noout -out "out/keys/$1.key"
   openssl ec -in "out/keys/$1.key" -pubout -out "out/keys/$1.pub" 2>/dev/null
 }
-for k in publisher publisher-policy marketplace attacker; do key "$k"; done
+for k in publisher publisher-policy marketplace attacker chamber; do key "$k"; done
+
+# detonate <name> <vsix>: load the package in the chamber, write out/chamber/<name>/detonate.bundle.json
+detonate() {
+  local name=$1 vsix=$2 dir="out/chamber/$1"
+  mkdir -p "$dir/in"
+  cp "$vsix" "$dir/in/package.vsix"
+  python3 -I chamber/unzip.py "$dir/in/package.vsix" "$dir/in/installed"
+  docker run --rm --network none --cap-add SYS_PTRACE --security-opt seccomp=unconfined \
+    -v "$PWD/$dir/in:/in:ro" -v "$PWD/$dir:/out" \
+    -v "$PWD/out/cilock-linux:/usr/local/bin/cilock:ro" \
+    -v "$PWD/chamber/detonate.sh:/detonate.sh:ro" \
+    -v "$PWD/out/keys/chamber.key:/chamber.key:ro" \
+    "$CHAMBER_IMAGE" bash /detonate.sh /chamber.key /out/detonate.bundle.json >"$dir/run.log" 2>&1 \
+    || { cat "$dir/run.log"; exit 1; }
+  printf 'detonated    %s: %s\n' "$name" "$(grep -m1 -oE 'tracing mode = [^ ]+' "$dir/run.log")"
+}
 
 step() { printf '\n== %s\n' "$*"; }
 
@@ -37,7 +57,8 @@ gate() {
     printf '%-12s ADMITTED  sha256:%s  %s\n' "$label" "$digest" "$vsix"
   else
     printf '%-12s REFUSED   sha256:%s  %s\n' "$label" "$digest" "$vsix"
-    grep -m1 -oE 'Reason: .{0,150}' out/verify.log | sed 's/^/             /'
+    { grep -m1 -oE 'denied due to: [^"\\]*' out/verify.log || grep -m1 -oE 'Reason: .{0,150}' out/verify.log; } \
+      | sed 's/^/             /'
   fi
 }
 market() { gate marketplace out/policy.signed.json out/keys/marketplace.pub "$@"; }
@@ -99,3 +120,21 @@ cilock run --step build -k out/keys/publisher.key --offline \
   --workingdir out/attacker -o out/stolen.bundle.json -- \
   python3 -I ../../tamper.py ../publisher/$VSIX stolen-key.vsix >out/stolen-build.log 2>&1
 client out/attacker/stolen-key.vsix out/stolen.bundle.json
+
+step "9. Detonation chamber: load each package in a sandbox, trace it, judge the trace"
+arch=$(docker info --format '{{.Architecture}}')
+case $arch in aarch64|arm64) arch=arm64 ;; x86_64|amd64) arch=amd64 ;; esac
+curl -fsSL -o out/cilock-linux "https://platform.testifysec.com/api/tools/cilock/linux-$arch"
+chmod +x out/cilock-linux
+detonate release out/publisher/$VSIX
+detonate stolen-key out/attacker/stolen-key.vsix
+# Demo shortcut again: derive the policy from the real release's detonation,
+# then add the behavior rules in chamber/detonation.rego.
+cilock policy from-bundles -k out/keys/chamber.pub -o out/detonation-policy.json \
+  out/chamber/release/detonate.bundle.json >/dev/null 2>&1
+python3 -I chamber/add_rego.py out/detonation-policy.json detonate chamber/detonation.rego no-sensitive-behavior
+cilock sign -k out/keys/marketplace.key -f out/detonation-policy.json \
+  -o out/detonation-policy.signed.json --offline >/dev/null 2>&1
+chamber() { gate chamber out/detonation-policy.signed.json out/keys/marketplace.pub "$@"; }
+chamber out/publisher/$VSIX out/chamber/release/detonate.bundle.json
+chamber out/attacker/stolen-key.vsix out/chamber/stolen-key/detonate.bundle.json
